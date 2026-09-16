@@ -1,0 +1,132 @@
+name: Build & Release AdminWorks C#
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Release Executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Configure Project & Versions
+        id: setup
+        shell: pwsh
+        run: |
+          # Detect whether files are in repository root or in .\AdminWorks_CSharp
+          if (Test-Path ".\AdminWorks.csproj") {
+              $projFile = ".\AdminWorks.csproj"
+          } elseif (Test-Path ".\AdminWorks_CSharp\AdminWorks.csproj") {
+              $projFile = ".\AdminWorks_CSharp\AdminWorks.csproj"
+          } else {
+              $found = Get-ChildItem -Recurse -Filter "*.csproj" | Select-Object -First 1
+              if (-not $found) { throw "Could not locate AdminWorks.csproj in the repository." }
+              $projFile = $found.FullName
+          }
+
+          Write-Host "Target project: $projFile"
+          "PROJ_FILE=$projFile" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          # Version calculation
+          $baseVer = "6.0"
+          $buildNum = "${{ github.run_number }}"
+          $tag = if ("${{ github.ref }}" -like "refs/tags/*") {
+              "${{ github.ref_name }}"
+          } else {
+              "v$baseVer.$buildNum"
+          }
+          $releaseTitle = "AdminWorks Pro $tag"
+
+          "TAG_NAME=$tag"                 | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "RELEASE_NAME=$releaseTitle"     | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "APP_VERSION=$baseVer.$buildNum" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Restore NuGet Dependencies
+        shell: pwsh
+        run: |
+          dotnet restore "$env:PROJ_FILE"
+
+      - name: Compile Standalone Executable (WinUI 3 / x64)
+        shell: pwsh
+        run: |
+          $publishDir = "$pwd\publish"
+
+          dotnet publish "$env:PROJ_FILE" `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:WindowsPackageType=None `
+            -p:AssemblyVersion="$env:APP_VERSION" `
+            -p:FileVersion="$env:APP_VERSION" `
+            -o $publishDir
+
+          if (-not (Test-Path "$publishDir\AdminWorks.exe")) {
+              throw "Build failed: AdminWorks.exe was not created in output directory."
+          }
+
+          # Copy primary exe to root for simple artifact capture
+          Copy-Item "$publishDir\AdminWorks.exe" ".\AdminWorks.exe" -Force
+
+          # Create full distribution zip package
+          Compress-Archive -Path "$publishDir\*" -DestinationPath ".\AdminWorks-v6.0-win-x64.zip" -Force
+
+          # Generate SHA-256 checksums
+          $exeHash = (Get-FileHash -Path ".\AdminWorks.exe" -Algorithm SHA256).Hash
+          $zipHash = (Get-FileHash -Path ".\AdminWorks-v6.0-win-x64.zip" -Algorithm SHA256).Hash
+
+          "$exeHash  AdminWorks.exe`n$zipHash  AdminWorks-v6.0-win-x64.zip" | Out-File -FilePath ".\checksums-sha256.txt" -Encoding ascii
+
+          Write-Host "Compilation successful."
+          Write-Host "AdminWorks.exe SHA-256: $exeHash"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdminWorks-Build-${{ github.run_number }}
+          path: |
+            .\AdminWorks.exe
+            .\AdminWorks-v6.0-win-x64.zip
+            .\checksums-sha256.txt
+          retention-days: 14
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.RELEASE_NAME }}
+          body: |
+            ### AdminWorks Pro ${{ env.TAG_NAME }}
+            Native Windows 11 application compiled with **.NET 8** and **WinUI 3 (Windows App SDK)**.
+
+            #### 📦 Release Assets
+            * **Standalone Executable**: `AdminWorks.exe` (Elevated, Per-Monitor V2 DPI aware)
+            * **Full Distribution Package**: `AdminWorks-v6.0-win-x64.zip`
+            * **Integrity Checksums**: `checksums-sha256.txt`
+          files: |
+            .\AdminWorks.exe
+            .\AdminWorks-v6.0-win-x64.zip
+            .\checksums-sha256.txt
+          make_latest: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
