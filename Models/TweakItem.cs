@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using AdminWorks.Services;
+using Microsoft.UI.Xaml;
 
 namespace AdminWorks.Models
 {
@@ -15,6 +16,10 @@ namespace AdminWorks.Models
         public string Description { get; set; } = string.Empty;
         public string IconGlyph { get; set; } = "\uE945"; // Default Bolt
         public bool IsToggle { get; set; }
+
+        public Visibility ToggleVisibility => IsToggle ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility ActionVisibility => IsToggle ? Visibility.Collapsed : Visibility.Visible;
+        public bool IsNotBusy => !IsBusy;
 
         private bool _isActive;
         public bool IsActive
@@ -41,6 +46,7 @@ namespace AdminWorks.Models
                 {
                     _isBusy = value;
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsNotBusy));
                 }
             }
         }
