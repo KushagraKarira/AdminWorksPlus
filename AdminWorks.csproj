@@ -12,6 +12,7 @@
     <EnableMsixTooling>false</EnableMsixTooling>
     <Nullable>enable</Nullable>
     <LangVersion>12.0</LangVersion>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
   </PropertyGroup>
 
   <ItemGroup>

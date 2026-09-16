@@ -910,7 +910,7 @@ Write-Output 'Take Ownership shortcut added.'";
                 },
                 DisableAction = async (svc) =>
                 {
-                    var script = "Remove-Item 'HKCR:\*\shell\TakeOwnership', 'HKCR:\Directory\shell\TakeOwnership' -Recurse -Force -ErrorAction SilentlyContinue; Write-Output 'Take Ownership shortcut removed.'";
+                    var script = @"Remove-Item 'HKCR:\*\shell\TakeOwnership', 'HKCR:\Directory\shell\TakeOwnership' -Recurse -Force -ErrorAction SilentlyContinue; Write-Output 'Take Ownership shortcut removed.'";
                     await svc.RunPowerShellScriptAsync(script, "Remove Take Ownership");
                 }
             });
@@ -1002,7 +1002,7 @@ Write-Output ""'Open PowerShell As Admin Here' added.""";
                 },
                 DisableAction = async (svc) =>
                 {
-                    var script = "Remove-Item 'HKCR:\Directory\Background\shell\OpenElevatedPS' -Recurse -Force -ErrorAction SilentlyContinue; Write-Output 'Shortcut removed.'";
+                    var script = @"Remove-Item 'HKCR:\Directory\Background\shell\OpenElevatedPS' -Recurse -Force -ErrorAction SilentlyContinue; Write-Output 'Shortcut removed.'";
                     await svc.RunPowerShellScriptAsync(script, "Remove PowerShell Admin Shortcut");
                 }
             });

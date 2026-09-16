@@ -1,3 +1,4 @@
+using System;
 using Microsoft.UI.Xaml;
 
 namespace AdminWorks
@@ -5,6 +6,11 @@ namespace AdminWorks
     public partial class App : Application
     {
         private Window? _window;
+
+        static App()
+        {
+            Environment.SetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY", AppContext.BaseDirectory);
+        }
 
         public App()
         {
