@@ -204,14 +204,14 @@
                                         <!-- If Toggle -->
                                         <ToggleSwitch IsOn="{x:Bind IsActive, Mode=TwoWay}"
                                                       Toggled="TweakToggle_Toggled"
-                                                      Visibility="{x:Bind IsToggle, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                      IsEnabled="{x:Bind IsBusy, Converter={StaticResource InvertBoolConverter}}" />
+                                                      Visibility="{x:Bind ToggleVisibility}"
+                                                      IsEnabled="{x:Bind IsNotBusy, Mode=OneWay}" />
 
                                         <!-- If Action Button -->
                                         <Button Content="Apply" Click="ApplyButton_Click" Tag="{x:Bind}"
                                                 Style="{StaticResource AccentButtonStyle}"
-                                                Visibility="{x:Bind IsToggle, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                                                IsEnabled="{x:Bind IsBusy, Converter={StaticResource InvertBoolConverter}}"
+                                                Visibility="{x:Bind ActionVisibility}"
+                                                IsEnabled="{x:Bind IsNotBusy, Mode=OneWay}"
                                                 MinWidth="88" Height="32" CornerRadius="6" />
                                     </Grid>
                                 </Grid>
