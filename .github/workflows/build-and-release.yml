@@ -30,21 +30,19 @@ jobs:
         id: setup
         shell: pwsh
         run: |
-          # Detect whether files are in repository root or in .\AdminWorks_CSharp
           if (Test-Path ".\AdminWorks.csproj") {
               $projFile = ".\AdminWorks.csproj"
           } elseif (Test-Path ".\AdminWorks_CSharp\AdminWorks.csproj") {
               $projFile = ".\AdminWorks_CSharp\AdminWorks.csproj"
           } else {
               $found = Get-ChildItem -Recurse -Filter "*.csproj" | Select-Object -First 1
-              if (-not $found) { throw "Could not locate AdminWorks.csproj in the repository." }
+              if (-not $found) { throw "Could not locate AdminWorks.csproj." }
               $projFile = $found.FullName
           }
 
           Write-Host "Target project: $projFile"
           "PROJ_FILE=$projFile" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-          # Version calculation
           $baseVer = "6.0"
           $buildNum = "${{ github.run_number }}"
           $tag = if ("${{ github.ref }}" -like "refs/tags/*") {
@@ -75,9 +73,14 @@ jobs:
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:WindowsPackageType=None `
+            -p:EnableMsixTooling=true `
             -p:AssemblyVersion="$env:APP_VERSION" `
             -p:FileVersion="$env:APP_VERSION" `
             -o $publishDir
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "dotnet publish failed with exit code $LASTEXITCODE"
+          }
 
           if (-not (Test-Path "$publishDir\AdminWorks.exe")) {
               throw "Build failed: AdminWorks.exe was not created in output directory."
@@ -116,7 +119,7 @@ jobs:
           name: ${{ env.RELEASE_NAME }}
           body: |
             ### AdminWorks Pro ${{ env.TAG_NAME }}
-            Native Windows 11 application compiled with **.NET 8** and **WinUI 3 (Windows App SDK)**.
+            Native Windows 11 executable built with **.NET 8** and **WinUI 3 (Windows App SDK)**.
 
             #### 📦 Release Assets
             * **Standalone Executable**: `AdminWorks.exe` (Elevated, Per-Monitor V2 DPI aware)
